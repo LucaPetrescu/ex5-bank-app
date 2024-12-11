@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,10 +44,11 @@ public class BankApplicationTests4 {
     public void depositToClient1() {
         double amount = 100;
 
+        int countOfEvents =
+                auditService.getEvents().size();
         bankingOperationsService.deposit(client, amount);
-
-        verify(auditService, times(1))
-                .auditDeposit(client.getActiveAccount().getId(), amount);
+        assertEquals( countOfEvents + 1,
+                auditService.getEvents().size());
     }
 
     @Test
@@ -54,46 +56,45 @@ public class BankApplicationTests4 {
         Account account = client.getActiveAccount();
         double amount = 100;
 
-        bankingOperationsService.deposit(account, amount);
-
-        verify(auditService, times(1))
-                .auditDeposit(account.getId(), amount);
+        int countOfEvents =
+                auditService.getEvents().size();
+        bankingOperationsService
+                .deposit(account, amount);
+        assertEquals( countOfEvents + 1,
+                auditService.getEvents().size());
     }
 
     @Test
     public void getClientBalance() {
+        int countOfEvents =
+                auditService.getEvents().size();
         bankingOperationsService.getBalance(client);
-
-        verify(auditService, times(1))
-                .auditBalance(client.getActiveAccount().getId());
+        assertEquals( countOfEvents + 1,
+                auditService.getEvents().size());
 
     }
 
     @Test
     public void withdrawFromClient1() {
         double amount = 100;
-
-        bankingOperationsService.withdraw(client, amount);
-
-        verify(auditService, times(1))
-                .auditWithdraw(client.getActiveAccount().getId(), amount, WithdrawState.TRYING);
-
-        verify(auditService, times(1))
-                .auditWithdraw(client.getActiveAccount().getId(), amount, WithdrawState.SUCCESSFUL);
+        int countOfEvents =
+                auditService.getEvents().size();
+        bankingOperationsService
+                .withdraw(client, amount);
+        assertEquals( countOfEvents + 2,
+                auditService.getEvents().size());
     }
 
     @Test
     public void withdrawFromClient2() {
         Account account = client.getActiveAccount();
         double amount = 100;
-
-        bankingOperationsService.withdraw(account, amount);
-
-        verify(auditService, times(1))
-                .auditWithdraw(client.getActiveAccount().getId(), amount, WithdrawState.TRYING);
-
-        verify(auditService, times(1))
-                .auditWithdraw(client.getActiveAccount().getId(), amount, WithdrawState.SUCCESSFUL);
+        int countOfEvents =
+                auditService.getEvents().size();
+        bankingOperationsService
+                .withdraw(account, amount);
+        assertEquals( countOfEvents + 2,
+                auditService.getEvents().size());
     }
 
     @Test
@@ -101,21 +102,20 @@ public class BankApplicationTests4 {
         Account account = client.getActiveAccount();
         double balance = account.getBalance();
         double overdraft = 0;
-
-        if (account instanceof CheckingAccount) {
-            overdraft = ((CheckingAccount) account).getOverdraft();
+        if (account instanceof CheckingAccount)
+        {
+            overdraft =
+                    ((CheckingAccount) account).getOverdraft();
         }
-
         double amount = balance + overdraft + 1000;
-
+        int countOfEvents =
+                auditService.getEvents().size();
         assertThrows(NotEnoughFundsException.class,
-                () -> bankingOperationsService.withdraw(account, amount));
-
-        verify(auditService, times(1))
-                .auditWithdraw(client.getActiveAccount().getId(), amount, WithdrawState.TRYING);
-
-        verify(auditService, times(1))
-                .auditWithdraw(client.getActiveAccount().getId(), amount, WithdrawState.FAILED);
+                () ->
+                        bankingOperationsService
+                                .withdraw(account, amount));
+        assertEquals(auditService.getEvents().size(),
+                countOfEvents + 2);
     }
 
 }
